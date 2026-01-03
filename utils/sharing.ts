@@ -1,24 +1,33 @@
-import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
+import * as Clipboard from 'expo-clipboard';
 import { Platform, Alert } from 'react-native';
 
-export async function shareGiftCollection(profileId: string, relation: string) {
-    const publicUrl = `https://giftwiz.ai/share/${profileId}`;
+export class SharingUtils {
+    static async shareGiftList(relation: string, products: any[]) {
+        const message = `Check out these gift ideas for my ${relation}!\n\n` +
+            products.map(p => `- ${p.title}: ${p.price}`).join('\n');
 
-    if (Platform.OS === 'web') {
-        await Clipboard.setStringAsync(publicUrl);
-        alert('Public link copied to clipboard!');
-        return;
+        if (Platform.OS === 'web') {
+            await Clipboard.setStringAsync(message);
+            alert('Gift list copied to clipboard!');
+            return;
+        }
+
+        const isAvailable = await Sharing.isAvailableAsync();
+        if (isAvailable) {
+            // In a real app, we might generate an image or a PDF, 
+            // but for now we'll share text or copy to clipboard
+            await Clipboard.setStringAsync(message);
+            Alert.alert('Copied', 'Gift list copied to clipboard. You can now paste it anywhere!');
+        } else {
+            await Clipboard.setStringAsync(message);
+        }
     }
 
-    const isAvailable = await Sharing.isAvailableAsync();
-    if (isAvailable) {
-        await Sharing.shareAsync(publicUrl, {
-            dialogTitle: `Check out these gifts for my ${relation}!`,
-            UTI: 'public.plain-text'
-        });
-    } else {
-        await Clipboard.setStringAsync(publicUrl);
-        Alert.alert('Link Copied', 'Public sharing is not available on this device, so we copied the link to your clipboard.');
+    static async copyToClipboard(text: string) {
+        await Clipboard.setStringAsync(text);
+        if (Platform.OS !== 'web') {
+            Alert.alert('Copied!', 'Link copied to clipboard.');
+        }
     }
 }

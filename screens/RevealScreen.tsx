@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Linking, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Linking, ActivityIndicator, Share } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useWizardStore } from '@/store/useWizardStore';
@@ -7,33 +7,17 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ShoppingBag, Star, RefreshCcw, Sparkles, Share2 } from 'lucide-react-native';
 import { GiftRepository } from '@/db/repository';
-import { generateRecommendations, Product } from '@/utils/recommendations';
-import { fetchRealRecommendations } from '@/services/giftEngine';
-import { shareGiftCollection } from '@/utils/sharing';
+import { AIService } from '@/services/ai.service';
+import { SharingUtils } from '@/utils/sharing';
 
-const MOCK_RECS = [
-    {
-        id: '1',
-        title: 'Fujifilm Instax Mini 12',
-        price: '$79.99',
-        image: 'https://images.unsplash.com/photo-1526170315873-3a921fab4703?w=400',
-        reason: 'Perfect for capturing memories at any occasion.',
-    },
-    {
-        id: '2',
-        title: 'Aura Carver Smart Frame',
-        price: '$149.00',
-        image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=400',
-        reason: 'Combines tech with personal sentiment beautifully.',
-    },
-    {
-        id: '3',
-        title: 'Ember Temperature Control Mug',
-        price: '$129.95',
-        image: 'https://images.unsplash.com/photo-1517142089942-ba376ce32a2e?w=400',
-        reason: 'A premium practical gift for daily use.',
-    }
-];
+interface Product {
+    id: string;
+    title: string;
+    price: string;
+    image: string;
+    reason: string;
+    link: string;
+}
 
 export default function RevealScreen() {
     const { recipient, swipes, currentProfileId, reset } = useWizardStore();
@@ -42,64 +26,55 @@ export default function RevealScreen() {
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme];
 
-    const handleOpenLink = async (title: string) => {
-        const url = 'https://www.google.com/search?q=' + encodeURIComponent(title);
+    const loadRealRecommendations = async () => {
         try {
-            const supported = await Linking.canOpenURL(url);
-            if (supported) {
-                await Linking.openURL(url);
-            } else {
-                console.warn("Don't know how to open URI: " + url);
-                // Fallback for some environments: just try opening regardless or log
-                await Linking.openURL(url);
+            // 1. Generate ideas via LLM
+            const ideas = await AIService.generateGiftIdeas(recipient, swipes);
+
+            // 2. Fetch real products via SerpApi
+            const results: Product[] = [];
+            for (let i = 0; i < ideas.length; i++) {
+                const idea = ideas[i];
+                const product = await AIService.searchProducts(idea.query);
+                if (product) {
+                    results.push({
+                        id: String(i),
+                        title: product.title,
+                        price: product.price,
+                        image: product.thumbnail || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400',
+                        reason: idea.reason,
+                        link: product.link
+                    });
+                }
+            }
+            setRecs(results);
+            setLoading(false);
+
+            // 3. Save to Local DB
+            const profileId = currentProfileId;
+            for (const rec of results) {
+                await GiftRepository.saveRecommendation({
+                    profile_id: profileId || 'default_tester_profile',
+                    product_title: rec.title,
+                    product_image_url: rec.image,
+                    price: rec.price,
+                    purchase_link: rec.link,
+                    is_saved: 0,
+                });
             }
         } catch (err) {
-            console.error('Error opening link:', err);
+            console.error('AI Flow Error:', err);
+            setLoading(false);
         }
     };
 
     useEffect(() => {
-        const loadGifts = async () => {
-            let dynamicRecs: Product[] = [];
-
-            try {
-                // Try fetching real AI results if keys exist
-                if (process.env.EXPO_PUBLIC_OPENAI_API_KEY && process.env.EXPO_PUBLIC_SERPAPI_API_KEY) {
-                    dynamicRecs = await fetchRealRecommendations(recipient, swipes);
-                } else {
-                    console.log('Skipping AI: Missing API keys');
-                    dynamicRecs = generateRecommendations(swipes, recipient);
-                }
-            } catch (err) {
-                console.error('AI Fetch failed, falling back to mock:', err);
-                dynamicRecs = generateRecommendations(swipes, recipient);
-            }
-
-            setRecs(dynamicRecs);
-
-            // Save recommendations to local DB
-            try {
-                const profileId = currentProfileId;
-                for (const rec of dynamicRecs) {
-                    await GiftRepository.saveRecommendation({
-                        profile_id: profileId || 'default_tester_profile',
-                        product_title: rec.title,
-                        product_image_url: rec.image,
-                        price: rec.price,
-                        purchase_link: 'https://google.com?q=' + encodeURIComponent(rec.title),
-                        is_saved: 0,
-                    });
-                }
-                setLoading(false);
-                console.log('Saved dynamic recommendations to local sqlite');
-            } catch (err) {
-                console.error('Local DB save error:', err);
-                setLoading(false);
-            }
-        };
-
-        loadGifts();
+        loadRealRecommendations();
     }, []);
+
+    const handleShare = async () => {
+        await SharingUtils.shareGiftList(recipient.relation, recs);
+    };
 
     if (loading) {
         return (
@@ -107,8 +82,8 @@ export default function RevealScreen() {
                 <View style={styles.magicIcon}>
                     <Sparkles size={48} color={colors.primary} />
                 </View>
-                <ThemedText style={styles.loadingTitle}>Wizard is working...</ThemedText>
-                <ThemedText style={styles.loadingSubtitle}>Finding the perfect gifts for your {recipient.relation}...</ThemedText>
+                <ThemedText style={styles.loadingTitle}>Curating your gifts...</ThemedText>
+                <ThemedText style={styles.loadingSubtitle}>AI is searching for the perfect matches for your ${recipient.relation}...</ThemedText>
                 <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
             </ThemedView>
         );
@@ -117,17 +92,19 @@ export default function RevealScreen() {
     return (
         <ThemedView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-                <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }]}>
-                    <View>
-                        <ThemedText type="title" style={styles.title}>The Reveal</ThemedText>
-                        <ThemedText style={styles.subtitle}>Gift ideas for your {recipient.relation}</ThemedText>
+                <View style={styles.header}>
+                    <View style={styles.titleRow}>
+                        <View>
+                            <ThemedText type="title" style={styles.title}>The Reveal</ThemedText>
+                            <ThemedText style={styles.subtitle}>Curated for your {recipient.relation}</ThemedText>
+                        </View>
+                        <TouchableOpacity
+                            style={[styles.shareBtn, { backgroundColor: colors.primary + '15' }]}
+                            onPress={handleShare}
+                        >
+                            <Share2 size={24} color={colors.primary} />
+                        </TouchableOpacity>
                     </View>
-                    <TouchableOpacity
-                        style={[styles.shareButton, { backgroundColor: colors.primary + '15' }]}
-                        onPress={() => shareGiftCollection(currentProfileId || 'default', recipient.relation)}
-                    >
-                        <Share2 size={24} color={colors.primary} />
-                    </TouchableOpacity>
                 </View>
 
                 {recs.map((rec) => (
@@ -146,7 +123,7 @@ export default function RevealScreen() {
 
                             <TouchableOpacity
                                 style={[styles.buyButton, { backgroundColor: colors.primary }]}
-                                onPress={() => handleOpenLink(rec.title)}
+                                onPress={() => Linking.openURL(rec.link)}
                                 activeOpacity={0.8}
                             >
                                 <ShoppingBag size={18} color="#FFF" />
@@ -205,7 +182,12 @@ const styles = StyleSheet.create({
     header: {
         marginBottom: 32,
     },
-    shareButton: {
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+    },
+    shareBtn: {
         width: 48,
         height: 48,
         borderRadius: 24,
