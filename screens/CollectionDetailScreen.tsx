@@ -5,7 +5,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { GiftRepository, Recommendation } from '@/db/repository';
-import { ShoppingBag, Star, ArrowLeft } from 'lucide-react-native';
+import { ShoppingBag, Star, ArrowLeft, Share2 } from 'lucide-react-native';
+import { shareGiftCollection } from '@/utils/sharing';
 
 interface Props {
     profileId: string;
@@ -42,9 +43,17 @@ export default function CollectionDetailScreen({ profileId, relation, onBack }: 
                     <ArrowLeft size={24} color={colors.text} />
                 </TouchableOpacity>
 
-                <View style={styles.header}>
-                    <ThemedText type="title" style={styles.title}>{relation}'s Gifts</ThemedText>
-                    <ThemedText style={styles.subtitle}>Curated specially for them</ThemedText>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={styles.header}>
+                        <ThemedText type="title" style={styles.title}>{relation}'s Gifts</ThemedText>
+                        <ThemedText style={styles.subtitle}>Curated specially for them</ThemedText>
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.shareButton, { backgroundColor: colors.primary + '15' }]}
+                        onPress={() => shareGiftCollection(profileId, relation)}
+                    >
+                        <Share2 size={24} color={colors.primary} />
+                    </TouchableOpacity>
                 </View>
 
                 {recs.map((rec) => (
@@ -92,6 +101,13 @@ const styles = StyleSheet.create({
     },
     header: {
         marginBottom: 32,
+    },
+    shareButton: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     title: {
         fontSize: 32,

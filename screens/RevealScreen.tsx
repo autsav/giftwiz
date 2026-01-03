@@ -5,9 +5,11 @@ import { ThemedView } from '@/components/themed-view';
 import { useWizardStore } from '@/store/useWizardStore';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { ShoppingBag, Star, RefreshCcw, Sparkles } from 'lucide-react-native';
+import { ShoppingBag, Star, RefreshCcw, Sparkles, Share2 } from 'lucide-react-native';
 import { GiftRepository } from '@/db/repository';
 import { generateRecommendations, Product } from '@/utils/recommendations';
+import { fetchRealRecommendations } from '@/services/giftEngine';
+import { shareGiftCollection } from '@/utils/sharing';
 
 const MOCK_RECS = [
     {
@@ -57,19 +59,27 @@ export default function RevealScreen() {
     };
 
     useEffect(() => {
-        // Generate dynamic recommendations once
-        const dynamicRecs = generateRecommendations(swipes, recipient);
-        setRecs(dynamicRecs);
+        const loadGifts = async () => {
+            let dynamicRecs: Product[] = [];
 
-        const timer = setTimeout(async () => {
-            setLoading(false);
+            try {
+                // Try fetching real AI results if keys exist
+                if (process.env.EXPO_PUBLIC_OPENAI_API_KEY && process.env.EXPO_PUBLIC_SERPAPI_API_KEY) {
+                    dynamicRecs = await fetchRealRecommendations(recipient, swipes);
+                } else {
+                    console.log('Skipping AI: Missing API keys');
+                    dynamicRecs = generateRecommendations(swipes, recipient);
+                }
+            } catch (err) {
+                console.error('AI Fetch failed, falling back to mock:', err);
+                dynamicRecs = generateRecommendations(swipes, recipient);
+            }
+
+            setRecs(dynamicRecs);
+
             // Save recommendations to local DB
             try {
                 const profileId = currentProfileId;
-                if (!profileId) {
-                    console.warn('No currentProfileId found in store');
-                }
-
                 for (const rec of dynamicRecs) {
                     await GiftRepository.saveRecommendation({
                         profile_id: profileId || 'default_tester_profile',
@@ -80,12 +90,15 @@ export default function RevealScreen() {
                         is_saved: 0,
                     });
                 }
+                setLoading(false);
                 console.log('Saved dynamic recommendations to local sqlite');
             } catch (err) {
                 console.error('Local DB save error:', err);
+                setLoading(false);
             }
-        }, 3000);
-        return () => clearTimeout(timer);
+        };
+
+        loadGifts();
     }, []);
 
     if (loading) {
@@ -104,9 +117,17 @@ export default function RevealScreen() {
     return (
         <ThemedView style={styles.container}>
             <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-                <View style={styles.header}>
-                    <ThemedText type="title" style={styles.title}>The Reveal</ThemedText>
-                    <ThemedText style={styles.subtitle}>Gift ideas for your {recipient.relation}</ThemedText>
+                <View style={[styles.header, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }]}>
+                    <View>
+                        <ThemedText type="title" style={styles.title}>The Reveal</ThemedText>
+                        <ThemedText style={styles.subtitle}>Gift ideas for your {recipient.relation}</ThemedText>
+                    </View>
+                    <TouchableOpacity
+                        style={[styles.shareButton, { backgroundColor: colors.primary + '15' }]}
+                        onPress={() => shareGiftCollection(currentProfileId || 'default', recipient.relation)}
+                    >
+                        <Share2 size={24} color={colors.primary} />
+                    </TouchableOpacity>
                 </View>
 
                 {recs.map((rec) => (
@@ -183,6 +204,13 @@ const styles = StyleSheet.create({
     },
     header: {
         marginBottom: 32,
+    },
+    shareButton: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     title: {
         fontSize: 36,
