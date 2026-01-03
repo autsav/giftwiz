@@ -3,6 +3,8 @@ import OpenAI from 'openai';
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 const SERPAPI_API_KEY = process.env.EXPO_PUBLIC_SERPAPI_API_KEY;
 
+console.log('OpenAI Key present:', !!OPENAI_API_KEY, OPENAI_API_KEY ? `(starts with ${OPENAI_API_KEY.slice(0, 8)})` : '');
+
 const openai = new OpenAI({
     apiKey: OPENAI_API_KEY,
     baseURL: 'https://openrouter.ai/api/v1',
@@ -40,19 +42,33 @@ export class AIService {
         const prompt = `
       Suggest 3 specific gift ideas for a ${recipient.age} year old ${recipient.relation} for a ${recipient.occasion}.
       The user expressed interest in: ${likes.join(', ')}.
-      Return ONLY a JSON array of objects with "title", "query" (specific product search term), and "reason".
+      Return a JSON object with a "suggestions" key containing an array of 3 objects. 
+      Each object must have "title", "query" (a specific 3-5 word product search term), and "reason".
     `;
 
         try {
+            console.log('Sending request to OpenRouter with model: openai/gpt-4o-mini');
             const response = await openai.chat.completions.create({
                 model: 'openai/gpt-4o-mini',
                 messages: [{ role: 'user', content: prompt }],
-                response_format: { type: 'json_object' }
             });
 
             const content = response.choices[0].message.content;
-            const data = JSON.parse(content || '{"suggestions": []}');
-            return data.suggestions || [];
+            console.log('Raw AI Response:', content);
+
+            if (!content) return [];
+
+            const data = JSON.parse(content);
+
+            // Handle case where AI wraps it in a 'suggestions' or 'gifts' key, or returns the array directly
+            if (Array.isArray(data)) return data;
+            if (data.suggestions && Array.isArray(data.suggestions)) return data.suggestions;
+            if (data.gifts && Array.isArray(data.gifts)) return data.gifts;
+            if (data.ideas && Array.isArray(data.ideas)) return data.ideas;
+
+            // If it's an object but not an array, maybe it's just one idea or we can't find the array
+            console.warn('AI JSON format unexpected:', data);
+            return [];
         } catch (err) {
             console.error('OpenAI Error:', err);
             return [];
@@ -83,7 +99,7 @@ export class AIService {
                 title: topResult?.title || query,
                 price: topResult?.price || 'N/A',
                 thumbnail: topResult?.thumbnail || '',
-                link: topResult?.link || ''
+                link: topResult?.link || `https://www.google.com/search?q=${encodeURIComponent(query)}`
             };
         } catch (err) {
             console.error('SerpApi Error:', err);

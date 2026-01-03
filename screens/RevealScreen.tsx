@@ -28,15 +28,23 @@ export default function RevealScreen() {
 
     const loadRealRecommendations = async () => {
         try {
+            console.log('Starting AI recommendation flow for:', recipient.relation);
             // 1. Generate ideas via LLM
             const ideas = await AIService.generateGiftIdeas(recipient, swipes);
+            console.log('AI generated ideas:', ideas);
+
+            if (!ideas || ideas.length === 0) {
+                console.warn('AI returned no ideas. Check OpenRouter key/logic.');
+            }
 
             // 2. Fetch real products via SerpApi
             const results: Product[] = [];
             for (let i = 0; i < ideas.length; i++) {
                 const idea = ideas[i];
+                console.log('Searching for product:', idea.query);
                 const product = await AIService.searchProducts(idea.query);
                 if (product) {
+                    console.log('Found product:', product.title);
                     results.push({
                         id: String(i),
                         title: product.title,
@@ -47,6 +55,7 @@ export default function RevealScreen() {
                     });
                 }
             }
+            console.log('Final results to display:', results.length);
             setRecs(results);
             setLoading(false);
 
@@ -63,7 +72,7 @@ export default function RevealScreen() {
                 });
             }
         } catch (err) {
-            console.error('AI Flow Error:', err);
+            console.error('AI Flow Error in RevealScreen:', err);
             setLoading(false);
         }
     };
@@ -123,7 +132,7 @@ export default function RevealScreen() {
 
                             <TouchableOpacity
                                 style={[styles.buyButton, { backgroundColor: colors.primary }]}
-                                onPress={() => Linking.openURL(rec.link)}
+                                onPress={() => rec.link ? Linking.openURL(rec.link) : null}
                                 activeOpacity={0.8}
                             >
                                 <ShoppingBag size={18} color="#FFF" />
