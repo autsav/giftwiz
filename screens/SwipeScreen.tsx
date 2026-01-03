@@ -1,0 +1,150 @@
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet } from 'react-native';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { useWizardStore } from '@/store/useWizardStore';
+import { SwipeCard } from '@/components/SwipeCard';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { X, Heart, Sparkles } from 'lucide-react-native';
+
+const INITIAL_CARDS = [
+    { id: 'tech', label: 'Tech Gadgets' },
+    { id: 'outdoors', label: 'Outdoor Gear' },
+    { id: 'luxury', label: 'Luxury & Style' },
+    { id: 'handmade', label: 'Handmade/Crafty' },
+    { id: 'fitness', label: 'Health & Fitness' },
+    { id: 'books', label: 'Literary/Books' },
+    { id: 'cooking', label: 'Kitchen & Food' },
+    { id: 'home', label: 'Home Decor' },
+].reverse(); // Reverse so the first item is on top (highest index)
+
+export default function SwipeScreen() {
+    const { recordSwipe, setStep } = useWizardStore();
+    const [cards, setCards] = useState(INITIAL_CARDS);
+    const colorScheme = useColorScheme() ?? 'light';
+    const colors = Colors[colorScheme];
+
+    const handleSwipe = (id: string, direction: 'left' | 'right') => {
+        recordSwipe(id, direction);
+        setCards((prev) => prev.filter((c) => c.id !== id));
+    };
+
+    useEffect(() => {
+        if (cards.length === 0) {
+            setTimeout(() => {
+                setStep('reveal');
+            }, 800);
+        }
+    }, [cards, setStep]);
+
+    return (
+        <ThemedView style={styles.container}>
+            <View style={styles.header}>
+                <View style={styles.progressContainer}>
+                    <View style={[styles.progressBar, { backgroundColor: colors.primary, width: `${((INITIAL_CARDS.length - cards.length) / INITIAL_CARDS.length) * 100}%` }]} />
+                </View>
+                <View style={styles.titleRow}>
+                    <Sparkles size={24} color={colors.accent} />
+                    <ThemedText style={styles.title}>Gift Wizard</ThemedText>
+                </View>
+                <ThemedText style={styles.subtitle}>Swipe right if they'd love this!</ThemedText>
+            </View>
+
+            <View style={styles.cardContainer}>
+                {cards.length > 0 ? (
+                    cards.map((card, index) => (
+                        <SwipeCard
+                            key={card.id}
+                            id={card.id}
+                            label={card.label}
+                            onSwipe={handleSwipe}
+                            index={index}
+                        />
+                    ))
+                ) : (
+                    <View style={styles.analyzing}>
+                        <ThemedText style={styles.analyzingText}>Analyzing preferences...</ThemedText>
+                    </View>
+                )}
+            </View>
+
+            <View style={styles.footer}>
+                <View style={[styles.iconButton, { backgroundColor: colors.card, borderColor: colors.muted + '20' }]}>
+                    <X size={32} color="#EF4444" />
+                </View>
+                <View style={[styles.iconButton, { backgroundColor: colors.card, borderColor: colors.muted + '20' }]}>
+                    <Heart size={32} color="#10B981" />
+                </View>
+            </View>
+        </ThemedView>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        paddingTop: 60,
+    },
+    header: {
+        paddingHorizontal: 24,
+        marginBottom: 40,
+    },
+    progressContainer: {
+        height: 4,
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        borderRadius: 2,
+        marginBottom: 24,
+        overflow: 'hidden',
+    },
+    progressBar: {
+        height: '100%',
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    title: {
+        fontSize: 24,
+        fontWeight: '800',
+    },
+    subtitle: {
+        fontSize: 16,
+        opacity: 0.6,
+    },
+    cardContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    analyzing: {
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    analyzingText: {
+        fontSize: 20,
+        fontWeight: '600',
+        opacity: 0.5,
+    },
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 40,
+        paddingBottom: 60,
+    },
+    iconButton: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+});
