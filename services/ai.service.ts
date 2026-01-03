@@ -53,10 +53,13 @@ export class AIService {
                 messages: [{ role: 'user', content: prompt }],
             });
 
-            const content = response.choices[0].message.content;
+            let content = response.choices[0].message.content;
             console.log('Raw AI Response:', content);
 
             if (!content) return [];
+
+            // Clean markdown code blocks if present
+            content = content.replace(/^```json\s*|```$/g, '').trim();
 
             const data = JSON.parse(content);
 
