@@ -5,7 +5,12 @@ const SERPAPI_API_KEY = process.env.EXPO_PUBLIC_SERPAPI_API_KEY;
 
 const openai = new OpenAI({
     apiKey: OPENAI_API_KEY,
-    dangerouslyAllowBrowser: true // Essential for client-side Expo Web/Native demo
+    baseURL: 'https://openrouter.ai/api/v1',
+    dangerouslyAllowBrowser: true,
+    defaultHeaders: {
+        'HTTP-Referer': 'https://giftwiz.ai', // Optional for OpenRouter
+        'X-Title': 'GiftWiz',
+    }
 });
 
 export interface AISuggestion {
@@ -40,7 +45,7 @@ export class AIService {
 
         try {
             const response = await openai.chat.completions.create({
-                model: 'gpt-4o',
+                model: 'openai/gpt-4o-mini',
                 messages: [{ role: 'user', content: prompt }],
                 response_format: { type: 'json_object' }
             });
