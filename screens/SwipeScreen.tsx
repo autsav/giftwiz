@@ -7,23 +7,21 @@ import { SwipeCard } from '@/components/SwipeCard';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { X, Heart, Sparkles } from 'lucide-react-native';
-
-const INITIAL_CARDS = [
-    { id: 'tech', label: 'Tech Gadgets' },
-    { id: 'outdoors', label: 'Outdoor Gear' },
-    { id: 'luxury', label: 'Luxury & Style' },
-    { id: 'handmade', label: 'Handmade/Crafty' },
-    { id: 'fitness', label: 'Health & Fitness' },
-    { id: 'books', label: 'Literary/Books' },
-    { id: 'cooking', label: 'Kitchen & Food' },
-    { id: 'home', label: 'Home Decor' },
-].reverse(); // Reverse so the first item is on top (highest index)
+import { getSwipeCategories } from '@/utils/wizard-logic';
 
 export default function SwipeScreen() {
-    const { recordSwipe, setStep } = useWizardStore();
-    const [cards, setCards] = useState(INITIAL_CARDS);
+    const { recipient, recordSwipe, setStep } = useWizardStore();
+    const [initialCount, setInitialCount] = useState(0);
+    const [cards, setCards] = useState<{ id: string; label: string }[]>([]);
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme];
+
+    useEffect(() => {
+        const dynamicCategories = getSwipeCategories(recipient.relation);
+        const formattedCards = [...dynamicCategories].reverse();
+        setCards(formattedCards);
+        setInitialCount(dynamicCategories.length);
+    }, [recipient.relation]);
 
     const handleSwipe = (id: string, direction: 'left' | 'right') => {
         recordSwipe(id, direction);
@@ -31,24 +29,26 @@ export default function SwipeScreen() {
     };
 
     useEffect(() => {
-        if (cards.length === 0) {
+        if (initialCount > 0 && cards.length === 0) {
             setTimeout(() => {
                 setStep('reveal');
             }, 800);
         }
-    }, [cards, setStep]);
+    }, [cards, initialCount, setStep]);
+
+    const progress = initialCount > 0 ? ((initialCount - cards.length) / initialCount) * 100 : 0;
 
     return (
         <ThemedView style={styles.container}>
             <View style={styles.header}>
                 <View style={styles.progressContainer}>
-                    <View style={[styles.progressBar, { backgroundColor: colors.primary, width: `${((INITIAL_CARDS.length - cards.length) / INITIAL_CARDS.length) * 100}%` }]} />
+                    <View style={[styles.progressBar, { backgroundColor: colors.primary, width: `${progress}%` }]} />
                 </View>
                 <View style={styles.titleRow}>
                     <Sparkles size={24} color={colors.accent} />
                     <ThemedText style={styles.title}>Gift Wizard</ThemedText>
                 </View>
-                <ThemedText style={styles.subtitle}>Swipe right if they'd love this!</ThemedText>
+                <ThemedText style={styles.subtitle}>Help us refine recommendations for your {recipient.relation}</ThemedText>
             </View>
 
             <View style={styles.cardContainer}>
