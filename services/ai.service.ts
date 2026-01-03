@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import { getJson } from 'serpapi';
 
 const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 const SERPAPI_API_KEY = process.env.EXPO_PUBLIC_SERPAPI_API_KEY;
@@ -70,11 +69,9 @@ export class AIService {
         }
 
         try {
-            const results = await getJson({
-                engine: "google_shopping",
-                q: query,
-                api_key: SERPAPI_API_KEY,
-            });
+            const url = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(query)}&api_key=${SERPAPI_API_KEY}`;
+            const response = await fetch(url);
+            const results = await response.json();
 
             const topResult = results.shopping_results?.[0];
             return {
