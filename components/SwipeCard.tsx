@@ -110,5 +110,6 @@ const styles = StyleSheet.create({
         fontSize: 32,
         fontWeight: '800',
         textAlign: 'center',
+        lineHeight: 40,
     },
 });

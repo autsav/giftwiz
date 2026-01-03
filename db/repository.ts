@@ -10,6 +10,7 @@ export interface RecipientProfile {
     occasion: string;
     budget_min: number;
     budget_max: number;
+    created_at?: string;
 }
 
 export interface Recommendation {
@@ -20,6 +21,7 @@ export interface Recommendation {
     price: string;
     purchase_link: string;
     is_saved: number;
+    created_at?: string;
 }
 
 export const GiftRepository = {
