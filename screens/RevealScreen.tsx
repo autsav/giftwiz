@@ -83,7 +83,7 @@ export default function RevealScreen() {
                     <Sparkles size={48} color={colors.primary} />
                 </View>
                 <ThemedText style={styles.loadingTitle}>Curating your gifts...</ThemedText>
-                <ThemedText style={styles.loadingSubtitle}>AI is searching for the perfect matches for your ${recipient.relation}...</ThemedText>
+                <ThemedText style={styles.loadingSubtitle}>AI is searching for the perfect matches for your {recipient.relation}...</ThemedText>
                 <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
             </ThemedView>
         );
