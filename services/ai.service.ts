@@ -58,8 +58,16 @@ export class AIService {
 
             if (!content) return [];
 
-            // Clean markdown code blocks if present
-            content = content.replace(/^```json\s*|```$/g, '').trim();
+            // Robust JSON extraction: Find the first '{' and last '}'
+            const start = content.indexOf('{');
+            const end = content.lastIndexOf('}');
+
+            if (start !== -1 && end !== -1) {
+                content = content.substring(start, end + 1);
+            } else {
+                console.warn('Could not find JSON structure in AI response');
+                return [];
+            }
 
             const data = JSON.parse(content);
 
@@ -94,18 +102,42 @@ export class AIService {
 
         try {
             const url = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(query)}&api_key=${SERPAPI_API_KEY}`;
+            console.log('Fetching SerpApi results from:', url.replace(SERPAPI_API_KEY!, 'REDACTED'));
             const response = await fetch(url);
             const results = await response.json();
 
+            if (results.error) {
+                console.error('SerpApi Error Response:', results.error);
+                return null;
+            }
+
             const topResult = results.shopping_results?.[0];
+            console.log('SerpApi Top Result:', topResult ? { title: topResult.title, price: topResult.price, hasThumbnail: !!topResult.thumbnail } : 'No result found');
+
+            if (!topResult) {
+                // Try organic search if shopping results are empty
+                console.log('No shopping results, trying google engine...');
+                const organicUrl = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(query)}&api_key=${SERPAPI_API_KEY}`;
+                const orgResponse = await fetch(organicUrl);
+                const orgResults = await orgResponse.json();
+                const firstOrganic = orgResults.organic_results?.[0];
+
+                return {
+                    title: query,
+                    price: 'Check price',
+                    thumbnail: firstOrganic?.thumbnail || '',
+                    link: firstOrganic?.link || `https://www.google.com/search?q=${encodeURIComponent(query)}`
+                };
+            }
+
             return {
-                title: topResult?.title || query,
-                price: topResult?.price || 'N/A',
-                thumbnail: topResult?.thumbnail || '',
-                link: topResult?.link || `https://www.google.com/search?q=${encodeURIComponent(query)}`
+                title: topResult.title || query,
+                price: topResult.price || 'N/A',
+                thumbnail: topResult.thumbnail || topResult.image || '',
+                link: topResult.link || `https://www.google.com/search?q=${encodeURIComponent(query)}`
             };
         } catch (err) {
-            console.error('SerpApi Error:', err);
+            console.error('SerpApi Fetch Error:', err);
             return null;
         }
     }
