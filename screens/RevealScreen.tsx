@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Linking, ActivityIndicator, Share } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, ActivityIndicator, Share } from 'react-native';
+import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useWizardStore } from '@/store/useWizardStore';
@@ -118,7 +119,12 @@ export default function RevealScreen() {
 
                 {recs.map((rec) => (
                     <View key={rec.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.muted + '20' }]}>
-                        <Image source={{ uri: rec.image }} style={styles.image} />
+                        <Image
+                            source={{ uri: rec.image }}
+                            style={styles.image}
+                            contentFit="contain"
+                            transition={1000}
+                        />
                         <View style={styles.cardContent}>
                             <View style={styles.priceRow}>
                                 <ThemedText style={styles.price}>{rec.price}</ThemedText>
@@ -127,7 +133,7 @@ export default function RevealScreen() {
                                     <ThemedText style={styles.ratingText}>4.8</ThemedText>
                                 </View>
                             </View>
-                            <ThemedText style={styles.productTitle}>{rec.title}</ThemedText>
+                            <ThemedText style={styles.productTitle} numberOfLines={2}>{rec.title}</ThemedText>
                             <ThemedText style={styles.reason}>{rec.reason}</ThemedText>
 
                             <TouchableOpacity
@@ -136,7 +142,7 @@ export default function RevealScreen() {
                                 activeOpacity={0.8}
                             >
                                 <ShoppingBag size={18} color="#FFF" />
-                                <ThemedText style={styles.buyButtonText}>Buy Now</ThemedText>
+                                <ThemedText style={styles.buyButtonText}>Buy Now via Amazon</ThemedText>
                             </TouchableOpacity>
                         </View>
                     </View>

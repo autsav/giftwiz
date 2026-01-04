@@ -96,13 +96,14 @@ export class AIService {
                 title: query,
                 price: '$XX.XX',
                 thumbnail: 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400',
-                link: `https://www.google.com/search?q=${encodeURIComponent(query)}`
+                link: `https://www.amazon.com/s?k=${encodeURIComponent(query)}&tag=giftwiz-20`
             };
         }
 
         try {
-            const url = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(query)}&api_key=${SERPAPI_API_KEY}`;
-            console.log('Fetching SerpApi results from:', url.replace(SERPAPI_API_KEY!, 'REDACTED'));
+            // Use Amazon engine for direct affiliate potential
+            const url = `https://serpapi.com/search.json?engine=amazon&q=${encodeURIComponent(query)}&api_key=${SERPAPI_API_KEY}`;
+            console.log('Fetching Amazon results from SerpApi...');
             const response = await fetch(url);
             const results = await response.json();
 
@@ -111,33 +112,40 @@ export class AIService {
                 return null;
             }
 
-            const topResult = results.shopping_results?.[0];
-            console.log('SerpApi Top Result:', topResult ? { title: topResult.title, price: topResult.price, hasThumbnail: !!topResult.thumbnail } : 'No result found');
+            // Amazon engine returns results in 'search_results'
+            const topResult = results.search_results?.[0];
+            console.log('Amazon Top Result:', topResult ? { title: topResult.title, price: topResult.price, hasImage: !!topResult.image } : 'No result found');
+
+            const affiliateTag = 'giftwiz-20'; // This could be moved to .env later
 
             if (!topResult) {
-                // Try organic search if shopping results are empty
-                console.log('No shopping results, trying google engine...');
-                const organicUrl = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(query)}&api_key=${SERPAPI_API_KEY}`;
-                const orgResponse = await fetch(organicUrl);
-                const orgResults = await orgResponse.json();
-                const firstOrganic = orgResults.organic_results?.[0];
-
                 return {
                     title: query,
                     price: 'Check price',
-                    thumbnail: firstOrganic?.thumbnail || '',
-                    link: firstOrganic?.link || `https://www.google.com/search?q=${encodeURIComponent(query)}`
+                    thumbnail: '',
+                    link: `https://www.amazon.com/s?k=${encodeURIComponent(query)}&tag=${affiliateTag}`
                 };
             }
 
+            // Append affiliate tag to Amazon link
+            let finalLink = topResult.link || `https://www.amazon.com/s?k=${encodeURIComponent(query)}`;
+            finalLink = finalLink.includes('?')
+                ? `${finalLink}&tag=${affiliateTag}`
+                : `${finalLink}?tag=${affiliateTag}`;
+
+            // Handle Amazon price format (can be an object or string)
+            const price = typeof topResult.price === 'object'
+                ? (topResult.price.raw || topResult.price.value || 'Check price')
+                : (topResult.raw_price || topResult.price || 'Check price');
+
             return {
                 title: topResult.title || query,
-                price: topResult.price || 'N/A',
-                thumbnail: topResult.thumbnail || topResult.image || '',
-                link: topResult.link || `https://www.google.com/search?q=${encodeURIComponent(query)}`
+                price: price,
+                thumbnail: topResult.image || topResult.thumbnail || '',
+                link: finalLink
             };
         } catch (err) {
-            console.error('SerpApi Fetch Error:', err);
+            console.error('Amazon Search Error:', err);
             return null;
         }
     }
