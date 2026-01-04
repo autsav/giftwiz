@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, TextInput } from 'react-native';
 import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { GiftRepository, Recommendation } from '@/db/repository';
-import { ShoppingBag, Star, ArrowLeft, CheckCircle2, Package, Tag } from 'lucide-react-native';
+import { ShoppingBag, Star, ArrowLeft, CheckCircle2, Package, Tag, FileText } from 'lucide-react-native';
 
 interface Props {
     profileId: string;
@@ -35,6 +35,11 @@ export default function CollectionDetailScreen({ profileId, relation, onBack }: 
 
         await GiftRepository.updateRecommendationStatus(id, nextStatus);
         setRecs(prev => prev.map(r => r.id === id ? { ...r, status: nextStatus } : r));
+    };
+
+    const handleUpdateNotes = async (id: string, notes: string) => {
+        await GiftRepository.updateRecommendationNotes(id, notes);
+        setRecs(prev => prev.map(r => r.id === id ? { ...r, notes } : r));
     };
 
     const handleOpenLink = async (url: string) => {
@@ -100,6 +105,21 @@ export default function CollectionDetailScreen({ profileId, relation, onBack }: 
                                         {rec.status.charAt(0).toUpperCase() + rec.status.slice(1)}
                                     </ThemedText>
                                 </TouchableOpacity>
+                            </View>
+
+                            <View style={[styles.notesSection, { backgroundColor: colors.muted + '05' }]}>
+                                <View style={styles.notesHeader}>
+                                    <FileText size={14} color={colors.muted} />
+                                    <ThemedText style={styles.notesLabel}>Gift Notes</ThemedText>
+                                </View>
+                                <TextInput
+                                    style={[styles.notesInput, { color: colors.text }]}
+                                    placeholder="Add a reminder (e.g. 'Size L', 'Wait for sale')"
+                                    placeholderTextColor={colors.muted}
+                                    value={rec.notes || ''}
+                                    onChangeText={(text) => handleUpdateNotes(rec.id, text)}
+                                    multiline
+                                />
                             </View>
 
                             <TouchableOpacity
@@ -201,6 +221,29 @@ const styles = StyleSheet.create({
     statusText: {
         fontSize: 13,
         fontWeight: '700',
+    },
+    notesSection: {
+        marginTop: 4,
+        marginBottom: 20,
+        padding: 12,
+        borderRadius: 12,
+    },
+    notesHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 8,
+    },
+    notesLabel: {
+        fontSize: 12,
+        fontWeight: '700',
+        opacity: 0.5,
+    },
+    notesInput: {
+        fontSize: 14,
+        padding: 0,
+        minHeight: 40,
+        textAlignVertical: 'top',
     },
     buyButton: {
         height: 50,

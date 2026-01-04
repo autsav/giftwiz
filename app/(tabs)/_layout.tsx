@@ -3,7 +3,7 @@ import React from 'react';
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Gift, Bookmark } from 'lucide-react-native';
+import { Gift, Bookmark, Sparkles } from 'lucide-react-native';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -21,6 +21,13 @@ export default function TabLayout() {
         }
       }}>
       <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Discovery',
+          tabBarIcon: ({ color }) => <Sparkles size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
           title: 'Wizard',
@@ -28,7 +35,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="saved"
         options={{
           title: 'Saved',
           tabBarIcon: ({ color }) => <Bookmark size={24} color={color} />,

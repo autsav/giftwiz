@@ -13,6 +13,8 @@ import { ThemedText } from './themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import * as Haptics from 'expo-haptics';
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25;
 
@@ -23,16 +25,29 @@ interface CardProps {
     index: number;
 }
 
+const triggerHaptic = (style: Haptics.ImpactFeedbackStyle) => {
+    Haptics.impactAsync(style);
+};
+
 export const SwipeCard = ({ id, label, onSwipe, index }: CardProps) => {
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme];
     const translateX = useSharedValue(0);
     const translateY = useSharedValue(0);
+    const hapticTriggered = useSharedValue(false);
 
     const gesture = Gesture.Pan()
         .onUpdate((event) => {
             translateX.value = event.translationX;
             translateY.value = event.translationY;
+
+            // Trigger feedback when threshold is hit
+            if (Math.abs(event.translationX) > SWIPE_THRESHOLD && !hapticTriggered.value) {
+                runOnJS(triggerHaptic)(Haptics.ImpactFeedbackStyle.Light);
+                hapticTriggered.value = true;
+            } else if (Math.abs(event.translationX) < SWIPE_THRESHOLD) {
+                hapticTriggered.value = false;
+            }
         })
         .onEnd((event) => {
             if (Math.abs(event.translationX) > SWIPE_THRESHOLD) {
@@ -41,11 +56,13 @@ export const SwipeCard = ({ id, label, onSwipe, index }: CardProps) => {
                     direction === 'right' ? SCREEN_WIDTH * 1.5 : -SCREEN_WIDTH * 1.5,
                     { damping: 20, stiffness: 90 }
                 );
+                runOnJS(triggerHaptic)(Haptics.ImpactFeedbackStyle.Medium);
                 runOnJS(onSwipe)(id, direction);
             } else {
                 translateX.value = withSpring(0);
                 translateY.value = withSpring(0);
             }
+            hapticTriggered.value = false;
         });
 
     const animatedStyle = useAnimatedStyle(() => {

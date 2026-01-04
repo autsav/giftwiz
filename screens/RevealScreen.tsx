@@ -6,7 +6,13 @@ import { ThemedView } from '@/components/themed-view';
 import { useWizardStore } from '@/store/useWizardStore';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { ShoppingBag, Star, RefreshCcw, Sparkles, Share2 } from 'lucide-react-native';
+import { ShoppingBag, Star, RefreshCcw, Sparkles, Share2, Gift } from 'lucide-react-native';
+import Animated, {
+    useAnimatedStyle,
+    withRepeat,
+    withTiming,
+    FadeIn
+} from 'react-native-reanimated';
 import { GiftRepository } from '@/db/repository';
 import { AIService } from '@/services/ai.service';
 import { SharingUtils } from '@/utils/sharing';
@@ -94,12 +100,43 @@ export default function RevealScreen() {
     if (loading) {
         return (
             <ThemedView style={styles.loadingContainer}>
-                <View style={styles.magicIcon}>
-                    <Sparkles size={48} color={colors.primary} />
+                <Animated.View
+                    entering={FadeIn.duration(800)}
+                    style={styles.magicIcon}
+                >
+                    <Animated.View
+                        style={[
+                            useAnimatedStyle(() => ({
+                                transform: [
+                                    { translateY: withRepeat(withTiming(-20, { duration: 1000 }), -1, true) },
+                                    { scale: withRepeat(withTiming(1.1, { duration: 1000 }), -1, true) },
+                                ]
+                            }))
+                        ]}
+                    >
+                        <Gift size={64} color={colors.primary} />
+                    </Animated.View>
+                    <View style={styles.loadingRing} />
+                </Animated.View>
+
+                <Animated.View entering={FadeIn.delay(400).duration(800)}>
+                    <ThemedText style={styles.loadingTitle}>Curating Magic...</ThemedText>
+                    <ThemedText style={styles.loadingSubtitle}>
+                        Our AI is unboxing the perfect gifts for your {recipient.relation}.
+                    </ThemedText>
+                </Animated.View>
+
+                <View style={styles.loadingBarContainer}>
+                    <Animated.View
+                        style={[
+                            styles.loadingBar,
+                            { backgroundColor: colors.primary },
+                            useAnimatedStyle(() => ({
+                                width: withRepeat(withTiming('100%', { duration: 2000 }), -1, false)
+                            }))
+                        ]}
+                    />
                 </View>
-                <ThemedText style={styles.loadingTitle}>Curating your gifts...</ThemedText>
-                <ThemedText style={styles.loadingSubtitle}>AI is searching for the perfect matches for your {recipient.relation}...</ThemedText>
-                <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
             </ThemedView>
         );
     }
@@ -179,13 +216,23 @@ const styles = StyleSheet.create({
         padding: 24,
     },
     magicIcon: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
+        width: 120,
+        height: 120,
+        borderRadius: 60,
         backgroundColor: 'rgba(99, 102, 241, 0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 32,
+        position: 'relative',
+    },
+    loadingRing: {
+        position: 'absolute',
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        borderWidth: 2,
+        borderColor: 'rgba(99, 102, 241, 0.2)',
+        borderStyle: 'dashed',
     },
     loadingTitle: {
         fontSize: 28,
@@ -199,6 +246,19 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         maxWidth: 250,
         lineHeight: 24,
+    },
+    loadingBarContainer: {
+        width: 200,
+        height: 4,
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        borderRadius: 2,
+        marginTop: 40,
+        overflow: 'hidden',
+    },
+    loadingBar: {
+        height: '100%',
+        width: '30%',
+        borderRadius: 2,
     },
     header: {
         marginBottom: 32,

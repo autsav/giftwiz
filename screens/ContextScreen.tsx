@@ -7,6 +7,7 @@ import { ArrowRight, ArrowLeft } from 'lucide-react-native';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { GiftRepository } from '@/db/repository';
+import * as Haptics from 'expo-haptics';
 
 export default function ContextScreen() {
     const { recipient, updateRecipient, setStep } = useWizardStore();
@@ -17,6 +18,11 @@ export default function ContextScreen() {
     const occasions = ['Birthday', 'Anniversary', 'Holiday', 'Graduation', 'Just Because'];
 
     const isReady = recipient.relation && recipient.occasion && recipient.age;
+
+    const handleSelect = (updates: any) => {
+        Haptics.selectionAsync();
+        updateRecipient(updates);
+    };
 
     return (
         <ThemedView style={styles.container}>
@@ -37,7 +43,7 @@ export default function ContextScreen() {
                                     styles.chip,
                                     recipient.relation === r && { backgroundColor: colors.primary, borderColor: colors.primary }
                                 ]}
-                                onPress={() => updateRecipient({ relation: r })}
+                                onPress={() => handleSelect({ relation: r })}
                             >
                                 <ThemedText style={[
                                     styles.chipText,
@@ -58,7 +64,7 @@ export default function ContextScreen() {
                                     styles.chip,
                                     recipient.occasion === o && { backgroundColor: colors.primary, borderColor: colors.primary }
                                 ]}
-                                onPress={() => updateRecipient({ occasion: o })}
+                                onPress={() => handleSelect({ occasion: o })}
                             >
                                 <ThemedText style={[
                                     styles.chipText,
@@ -98,7 +104,7 @@ export default function ContextScreen() {
                                     recipient.budget[0] === b.range[0] && recipient.budget[1] === b.range[1] &&
                                     { backgroundColor: colors.primary, borderColor: colors.primary }
                                 ]}
-                                onPress={() => updateRecipient({ budget: b.range as [number, number] })}
+                                onPress={() => handleSelect({ budget: b.range as [number, number] })}
                             >
                                 <ThemedText style={[
                                     styles.chipText,

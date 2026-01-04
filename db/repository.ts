@@ -22,6 +22,7 @@ export interface Recommendation {
     purchase_link: string;
     is_saved: number;
     status: 'suggested' | 'purchased' | 'wrapped';
+    notes?: string;
     created_at?: string;
 }
 
@@ -48,8 +49,8 @@ export const GiftRepository = {
         const db = await getDB();
         const id = Crypto.randomUUID();
         await db.runAsync(
-            'INSERT INTO recommendations (id, profile_id, product_title, product_image_url, price, purchase_link, is_saved, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [id, rec.profile_id, rec.product_title, rec.product_image_url, rec.price, rec.purchase_link, rec.is_saved, rec.status || 'suggested']
+            'INSERT INTO recommendations (id, profile_id, product_title, product_image_url, price, purchase_link, is_saved, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [id, rec.profile_id, rec.product_title, rec.product_image_url, rec.price, rec.purchase_link, rec.is_saved, rec.status || 'suggested', rec.notes || null]
         );
         return id;
     },
@@ -75,6 +76,14 @@ export const GiftRepository = {
         await db.runAsync(
             'UPDATE recommendations SET status = ? WHERE id = ?',
             [status, id]
+        );
+    },
+
+    async updateRecommendationNotes(id: string, notes: string) {
+        const db = await getDB();
+        await db.runAsync(
+            'UPDATE recommendations SET notes = ? WHERE id = ?',
+            [notes, id]
         );
     },
 

@@ -46,6 +46,7 @@ export async function initDatabase() {
       purchase_link TEXT,
       is_saved INTEGER DEFAULT 0,
       status TEXT DEFAULT 'suggested', -- New field: 'suggested', 'purchased', 'wrapped'
+      notes TEXT, -- User notes for the gift
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (profile_id) REFERENCES recipient_profiles(id)
     );
@@ -61,10 +62,13 @@ export async function initDatabase() {
   // Migration: Add status column if it doesn't exist
   try {
     await db.execAsync('ALTER TABLE recommendations ADD COLUMN status TEXT DEFAULT "suggested";');
-    console.log('Database migrated: added status column to recommendations');
-  } catch (e) {
-    // Ignore error if column already exists
-  }
+  } catch (e) { }
+
+  // Migration: Add notes column if it doesn't exist
+  try {
+    await db.execAsync('ALTER TABLE recommendations ADD COLUMN notes TEXT;');
+    console.log('Database migrated: added notes column to recommendations');
+  } catch (e) { }
 
   return db;
 }
