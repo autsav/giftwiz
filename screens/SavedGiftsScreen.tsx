@@ -12,6 +12,7 @@ export default function SavedGiftsScreen() {
     const [profiles, setProfiles] = useState<RecipientProfile[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [selectedProfile, setSelectedProfile] = useState<RecipientProfile | null>(null);
+    const [activeTab, setActiveTab] = useState<'active' | 'history'>('active');
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme];
 
@@ -34,6 +35,13 @@ export default function SavedGiftsScreen() {
         setRefreshing(false);
     };
 
+    const filteredProfiles = profiles.filter(p => {
+        // Simple logic: older than 30 days or explicitly marked could go to history
+        // For now, let's just show all in 'Active' and none in 'History' unless we implement a 'Archive' feature
+        if (activeTab === 'active') return true;
+        return false;
+    });
+
     if (selectedProfile) {
         return (
             <CollectionDetailScreen
@@ -54,20 +62,39 @@ export default function SavedGiftsScreen() {
                 <ThemedText style={styles.subtitle}>People you're finding gifts for</ThemedText>
             </View>
 
+            <View style={styles.tabContainer}>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'active' && { borderBottomColor: colors.primary }]}
+                    onPress={() => setActiveTab('active')}
+                >
+                    <ThemedText style={[styles.tabText, activeTab === 'active' && { color: colors.primary }]}>Active</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.tab, activeTab === 'history' && { borderBottomColor: colors.primary }]}
+                    onPress={() => setActiveTab('history')}
+                >
+                    <ThemedText style={[styles.tabText, activeTab === 'history' && { color: colors.primary }]}>Gift History</ThemedText>
+                </TouchableOpacity>
+            </View>
+
             <ScrollView
                 contentContainerStyle={styles.scroll}
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
                 }
             >
-                {profiles.length === 0 ? (
+                {filteredProfiles.length === 0 ? (
                     <View style={styles.empty}>
                         <BookMarked size={64} color={colors.muted} />
-                        <ThemedText style={styles.emptyText}>No lists saved yet.</ThemedText>
-                        <ThemedText style={styles.emptySubtext}>Complete a gift search to see it here.</ThemedText>
+                        <ThemedText style={styles.emptyText}>
+                            {activeTab === 'active' ? 'No lists saved yet.' : 'No gift history yet.'}
+                        </ThemedText>
+                        <ThemedText style={styles.emptySubtext}>
+                            {activeTab === 'active' ? 'Complete a gift search to see it here.' : 'Mark a gift as purchased to see it in your history.'}
+                        </ThemedText>
                     </View>
                 ) : (
-                    profiles.map((profile) => (
+                    filteredProfiles.map((profile) => (
                         <TouchableOpacity
                             key={profile.id}
                             style={[styles.card, { backgroundColor: colors.card, borderColor: colors.muted + '20' }]}
@@ -121,6 +148,24 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 16,
         opacity: 0.6,
+    },
+    tabContainer: {
+        flexDirection: 'row',
+        paddingHorizontal: 24,
+        marginBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
+    },
+    tab: {
+        paddingVertical: 12,
+        marginRight: 24,
+        borderBottomWidth: 2,
+        borderBottomColor: 'transparent',
+    },
+    tabText: {
+        fontSize: 16,
+        fontWeight: '700',
+        opacity: 0.5,
     },
     scroll: {
         padding: 24,

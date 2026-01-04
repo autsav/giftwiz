@@ -18,6 +18,8 @@ interface Product {
     image: string;
     reason: string;
     link: string;
+    rating: number;
+    reviews: number;
 }
 
 export default function RevealScreen() {
@@ -52,7 +54,9 @@ export default function RevealScreen() {
                         price: product.price,
                         image: product.thumbnail || 'https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400',
                         reason: idea.reason,
-                        link: product.link
+                        link: product.link,
+                        rating: product.rating,
+                        reviews: product.reviews
                     });
                 }
             }
@@ -70,6 +74,7 @@ export default function RevealScreen() {
                     price: rec.price,
                     purchase_link: rec.link,
                     is_saved: 0,
+                    status: 'suggested'
                 });
             }
         } catch (err) {
@@ -130,7 +135,8 @@ export default function RevealScreen() {
                                 <ThemedText style={styles.price}>{rec.price}</ThemedText>
                                 <View style={styles.rating}>
                                     <Star size={14} color={colors.accent} fill={colors.accent} />
-                                    <ThemedText style={styles.ratingText}>4.8</ThemedText>
+                                    <ThemedText style={styles.ratingText}>{rec.rating}</ThemedText>
+                                    <ThemedText style={styles.reviewsText}>({rec.reviews})</ThemedText>
                                 </View>
                             </View>
                             <ThemedText style={styles.productTitle} numberOfLines={2}>{rec.title}</ThemedText>
@@ -261,6 +267,11 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '700',
         color: '#D97706',
+    },
+    reviewsText: {
+        fontSize: 12,
+        opacity: 0.5,
+        marginLeft: 2,
     },
     productTitle: {
         fontSize: 20,

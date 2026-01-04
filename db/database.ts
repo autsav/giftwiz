@@ -45,6 +45,7 @@ export async function initDatabase() {
       price TEXT,
       purchase_link TEXT,
       is_saved INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'suggested', -- New field: 'suggested', 'purchased', 'wrapped'
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (profile_id) REFERENCES recipient_profiles(id)
     );
@@ -56,6 +57,14 @@ export async function initDatabase() {
     INSERT OR IGNORE INTO recipient_profiles (id, user_id, name, relation, age, occasion, budget_min, budget_max) 
     VALUES ('default_tester_profile', 'guest_user', 'Tester', 'Friend', '25', 'Birthday', 0, 100);
   `);
+
+  // Migration: Add status column if it doesn't exist
+  try {
+    await db.execAsync('ALTER TABLE recommendations ADD COLUMN status TEXT DEFAULT "suggested";');
+    console.log('Database migrated: added status column to recommendations');
+  } catch (e) {
+    // Ignore error if column already exists
+  }
 
   return db;
 }

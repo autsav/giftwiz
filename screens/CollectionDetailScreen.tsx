@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Image, TouchableOpacity, Linking } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { Image } from 'expo-image';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { GiftRepository, Recommendation } from '@/db/repository';
-import { ShoppingBag, Star, ArrowLeft } from 'lucide-react-native';
+import { ShoppingBag, Star, ArrowLeft, CheckCircle2, Package, Tag } from 'lucide-react-native';
 
 interface Props {
     profileId: string;
@@ -26,8 +27,18 @@ export default function CollectionDetailScreen({ profileId, relation, onBack }: 
         loadRecs();
     }, [profileId]);
 
-    const handleOpenLink = async (title: string) => {
-        const url = 'https://www.google.com/search?q=' + encodeURIComponent(title);
+    const toggleStatus = async (id: string, currentStatus: Recommendation['status']) => {
+        let nextStatus: Recommendation['status'] = 'suggested';
+        if (currentStatus === 'suggested') nextStatus = 'purchased';
+        else if (currentStatus === 'purchased') nextStatus = 'wrapped';
+        else nextStatus = 'suggested';
+
+        await GiftRepository.updateRecommendationStatus(id, nextStatus);
+        setRecs(prev => prev.map(r => r.id === id ? { ...r, status: nextStatus } : r));
+    };
+
+    const handleOpenLink = async (url: string) => {
+        if (!url) return;
         try {
             await Linking.openURL(url);
         } catch (err) {
@@ -49,7 +60,12 @@ export default function CollectionDetailScreen({ profileId, relation, onBack }: 
 
                 {recs.map((rec) => (
                     <View key={rec.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.muted + '20' }]}>
-                        <Image source={{ uri: rec.product_image_url }} style={styles.image} />
+                        <Image
+                            source={{ uri: rec.product_image_url }}
+                            style={styles.image}
+                            contentFit="contain"
+                            transition={1000}
+                        />
                         <View style={styles.cardContent}>
                             <View style={styles.priceRow}>
                                 <ThemedText style={styles.price}>{rec.price}</ThemedText>
@@ -58,11 +74,37 @@ export default function CollectionDetailScreen({ profileId, relation, onBack }: 
                                     <ThemedText style={styles.ratingText}>4.8</ThemedText>
                                 </View>
                             </View>
-                            <ThemedText style={styles.productTitle}>{rec.product_title}</ThemedText>
+                            <ThemedText style={styles.productTitle} numberOfLines={2}>{rec.product_title}</ThemedText>
+
+                            <View style={styles.trackerRow}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.statusBtn,
+                                        rec.status === 'purchased' && { backgroundColor: '#10B98120', borderColor: '#10B981' },
+                                        rec.status === 'wrapped' && { backgroundColor: '#8B5CF620', borderColor: '#8B5CF6' }
+                                    ]}
+                                    onPress={() => toggleStatus(rec.id, rec.status)}
+                                >
+                                    {rec.status === 'purchased' ? (
+                                        <CheckCircle2 size={16} color="#10B981" />
+                                    ) : rec.status === 'wrapped' ? (
+                                        <Package size={16} color="#8B5CF6" />
+                                    ) : (
+                                        <Tag size={16} color={colors.muted} />
+                                    )}
+                                    <ThemedText style={[
+                                        styles.statusText,
+                                        rec.status === 'purchased' && { color: '#10B981' },
+                                        rec.status === 'wrapped' && { color: '#8B5CF6' }
+                                    ]}>
+                                        {rec.status.charAt(0).toUpperCase() + rec.status.slice(1)}
+                                    </ThemedText>
+                                </TouchableOpacity>
+                            </View>
 
                             <TouchableOpacity
                                 style={[styles.buyButton, { backgroundColor: colors.primary }]}
-                                onPress={() => handleOpenLink(rec.product_title)}
+                                onPress={() => handleOpenLink(rec.purchase_link)}
                                 activeOpacity={0.8}
                             >
                                 <ShoppingBag size={18} color="#FFF" />
@@ -139,7 +181,26 @@ const styles = StyleSheet.create({
     productTitle: {
         fontSize: 18,
         fontWeight: '700',
-        marginBottom: 16,
+        marginBottom: 12,
+    },
+    trackerRow: {
+        flexDirection: 'row',
+        marginBottom: 20,
+    },
+    statusBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.1)',
+        backgroundColor: 'rgba(0,0,0,0.02)',
+    },
+    statusText: {
+        fontSize: 13,
+        fontWeight: '700',
     },
     buyButton: {
         height: 50,
