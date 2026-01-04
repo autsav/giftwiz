@@ -39,8 +39,11 @@ export class AIService {
             .filter(([_, val]) => val === 1)
             .map(([id]) => id);
 
+        const budgetStr = recipient.budget[1] > 500 ? `over $${recipient.budget[0]}` : `$${recipient.budget[0]} to $${recipient.budget[1]}`;
+
         const prompt = `
       Suggest 3 specific gift ideas for a ${recipient.age} year old ${recipient.relation} for a ${recipient.occasion}.
+      The budget is ${budgetStr}.
       The user expressed interest in: ${likes.join(', ')}.
       Return a JSON object with a "suggestions" key containing an array of 3 objects. 
       Each object must have "title", "query" (a specific 3-5 word product search term), and "reason".

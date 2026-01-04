@@ -81,6 +81,35 @@ export default function ContextScreen() {
                     />
                 </View>
 
+                <View style={styles.section}>
+                    <ThemedText style={styles.label}>What's your budget?</ThemedText>
+                    <View style={styles.chipContainer}>
+                        {[
+                            { label: 'Under $25', range: [0, 25] },
+                            { label: '$25 - $50', range: [25, 50] },
+                            { label: '$50 - $100', range: [50, 100] },
+                            { label: '$100 - $250', range: [100, 250] },
+                            { label: '$250+', range: [250, 1000] },
+                        ].map((b) => (
+                            <TouchableOpacity
+                                key={b.label}
+                                style={[
+                                    styles.chip,
+                                    recipient.budget[0] === b.range[0] && recipient.budget[1] === b.range[1] &&
+                                    { backgroundColor: colors.primary, borderColor: colors.primary }
+                                ]}
+                                onPress={() => updateRecipient({ budget: b.range as [number, number] })}
+                            >
+                                <ThemedText style={[
+                                    styles.chipText,
+                                    recipient.budget[0] === b.range[0] && recipient.budget[1] === b.range[1] &&
+                                    { color: '#FFF' }
+                                ]}>{b.label}</ThemedText>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
                 <TouchableOpacity
                     style={[
                         styles.nextButton,

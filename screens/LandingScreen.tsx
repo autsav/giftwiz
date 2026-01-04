@@ -7,22 +7,51 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Sparkles, Calendar, ArrowRight, Gift } from 'lucide-react-native';
 import { CalendarService, GiftEvent } from '@/services/calendar.service';
+import { NotificationService } from '@/services/notification.service';
 
 export default function LandingScreen() {
-    const { setStep } = useWizardStore();
+    const { setStep, updateRecipient, reset } = useWizardStore();
     const colorScheme = useColorScheme() ?? 'light';
     const colors = Colors[colorScheme];
     const [events, setEvents] = useState<GiftEvent[]>([]);
 
     useEffect(() => {
-        const loadEvents = async () => {
+        const loadEventsAndNotifications = async () => {
             if (Platform.OS !== 'web') {
                 const upcoming = await CalendarService.getUpcomingBirthdays();
                 setEvents(upcoming);
+
+                const hasPermission = await NotificationService.requestPermissions();
+                if (hasPermission) {
+                    for (const event of upcoming) {
+                        await NotificationService.scheduleOccasionReminder(event.title, new Date(event.startDate));
+                    }
+                }
             }
         };
-        loadEvents();
+        loadEventsAndNotifications();
     }, []);
+
+    const handleEventPress = (event: GiftEvent) => {
+        reset(); // Clear previous state
+
+        // Try to infer occasion and relation from title (e.g., "Dad's Birthday")
+        let relation = '';
+        let occasion = 'Birthday';
+
+        if (event.title.toLowerCase().includes('birthday')) occasion = 'Birthday';
+        if (event.title.toLowerCase().includes('anniversary')) occasion = 'Anniversary';
+
+        // Very basic extraction for demo
+        const name = event.title.split("'")[0];
+
+        updateRecipient({
+            relation: name, // Fallback to name if relation is unknown
+            occasion: occasion,
+        });
+
+        setStep('context');
+    };
 
     return (
         <ThemedView style={styles.container}>
@@ -38,7 +67,10 @@ export default function LandingScreen() {
 
                     <TouchableOpacity
                         style={[styles.startButton, { backgroundColor: colors.primary }]}
-                        onPress={() => setStep('context')}
+                        onPress={() => {
+                            reset();
+                            setStep('context');
+                        }}
                         activeOpacity={0.8}
                     >
                         <ThemedText style={styles.buttonText}>Start Finding Gifts</ThemedText>
@@ -56,7 +88,7 @@ export default function LandingScreen() {
                             <TouchableOpacity
                                 key={event.id}
                                 style={[styles.eventCard, { backgroundColor: colors.card, borderColor: colors.muted + '20' }]}
-                                onPress={() => setStep('context')}
+                                onPress={() => handleEventPress(event)}
                             >
                                 <View style={styles.eventInfo}>
                                     <ThemedText style={styles.eventTitle}>{event.title}</ThemedText>
